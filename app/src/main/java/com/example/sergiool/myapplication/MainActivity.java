@@ -53,28 +53,6 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
     }
 
-    private void getPermissions() {
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED
-                || ActivityCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED
-                || ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA, Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.READ_EXTERNAL_STORAGE}, 1);
-        } else
-            dispatchTakePictureIntent();
-    }
-
-    @Override
-    public void onRequestPermissionsResult(int requestCode, String permissions[], int[] grantResults) {
-        switch (requestCode) {
-            case 1: {
-                if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    dispatchTakePictureIntent();
-                } else {
-                    Toast.makeText(this, "Não vai funcionar!!!", Toast.LENGTH_LONG).show();
-                }
-                return;
-            }
-        }
-    }
 
     public void onClick(View v){ // Download file
         OkHttpClient client = new OkHttpClient();
@@ -110,9 +88,35 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    public void getPermissions(View view) {
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED
+         || ActivityCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED
+         || ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA, Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.READ_EXTERNAL_STORAGE}, 1);
+        } else {
+            Log.d("TAG", "Ja tem permissoes.");
+            openCameraIntent();
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String permissions[], int[] grantResults) {
+        switch (requestCode) {
+            case 1: {
+                if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    openCameraIntent();
+                } else {
+                    Toast.makeText(this, "Não vai funcionar!!!", Toast.LENGTH_LONG).show();
+                }
+                return;
+            }
+        }
+    }
+
+
     private static final int REQUEST_CAPTURE_IMAGE = 100;
 
-    public void openCameraIntent(View view) {
+    public void openCameraIntent() {
         Intent pictureIntent = new Intent(
                 MediaStore.ACTION_IMAGE_CAPTURE);
         if (pictureIntent.resolveActivity(getPackageManager()) != null) {
@@ -121,7 +125,6 @@ public class MainActivity extends AppCompatActivity {
             try {
                 photoFile = createImageFile();
             } catch (IOException ex) {
-                // Error occurred while creating the File
                 Log.d("TAG", ex.getMessage());
             }
             if (photoFile != null) {
@@ -130,6 +133,7 @@ public class MainActivity extends AppCompatActivity {
                         photoURI);
                 startActivityForResult(pictureIntent,
                         REQUEST_CAPTURE_IMAGE);
+
             }
         }
     }
@@ -150,22 +154,6 @@ public class MainActivity extends AppCompatActivity {
 
         imageFilePath = image.getAbsolutePath();
         return image;
-    }
-
-
-    public void callIntentImgCam(View view){
-/*        FileProvider file = new FileProvider("img.png");
-        Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-        intent.putExtra(MediaStore.EXTRA_OUTPUT, Uri.fromFile(file));
-        intent.putExtra(MediaStore.EXTRA_VIDEO_QUALITY, 1);
-        //getPermissions();
-        startActivityForResult(intent, IMG_CAM);*/
-    }
-
-    public void onClickCAM(View view) {
-/*        Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-        startActivityForResult(intent, IMG_CAM2);*/
-        getPermissions();
     }
 
     public void onUpload(View view){
@@ -198,6 +186,8 @@ public class MainActivity extends AppCompatActivity {
         File file = null;
         if (requestCode == REQUEST_CAPTURE_IMAGE && resultCode == RESULT_OK){
             file = new File(imageFilePath);
+            Log.d("TAG", "Uri: " + file.getName());
+
         }
         if (resultCode == RESULT_OK && resultData != null) {
             if (requestCode == IMG_SDCARD) {
@@ -209,7 +199,7 @@ public class MainActivity extends AppCompatActivity {
                 uri = resultData.getData();
                 try {
                     file = from(this, uri);
-                    Log.i("TAG", "Uri: " + file.getName());
+                    Log.d("TAG", "Uri: " + file.getName());
                     //URI juri = new java.net.URI(uri.getScheme(), uri.getSchemeSpecificPart(), uri.getFragment());
                 } catch (Exception e) {
                     Log.d("TAG", e.getMessage());
@@ -229,7 +219,7 @@ public class MainActivity extends AppCompatActivity {
 
         if (file != null) {
             try {
-                upload("http://ufsj.site/upload.php", file);
+                upload("https://www.ufsj.site/upload.php", file);
             } catch (Exception e) {
                 Log.d("TAG", e.getMessage());
             }
@@ -350,10 +340,11 @@ public class MainActivity extends AppCompatActivity {
 
     public void upload(String url, File file) throws IOException {
         OkHttpClient client = new OkHttpClient();
+        Log.d("TAG", "Vai mandar: " + file.getName());
         RequestBody formBody = new MultipartBody.Builder()
                 .setType(MultipartBody.FORM)
                 .addFormDataPart("fileToUpload", file.getName(),
-                        RequestBody.create(MediaType.parse("text/plain"), file))
+                        RequestBody.create(MediaType.parse("image/jpeg"), file))
                 .build();
         Request request = new Request.Builder()
                         .url(url).post(formBody).build();
@@ -367,11 +358,12 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void onResponse(Call call, final Response response) throws IOException {
-                if (!response.isSuccessful()) {
+                if (response.isSuccessful()) {
                     Log.d("TAG", "Enviado com sucesso.");
-                    // Handle the error
-                }
-                // Upload successful
+                    // Upload successful
+                } else
+                    Log.d("TAG", "Erro" + response.message());
+
             }
         });
     }

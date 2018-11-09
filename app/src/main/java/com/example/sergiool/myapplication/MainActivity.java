@@ -42,8 +42,6 @@ import okhttp3.Response;
 import okhttp3.ResponseBody;
 
 public class MainActivity extends AppCompatActivity {
-    private static final int IMG_CAM = 1;
-    private static final int IMG_CAM2 = 2;
     private static final int IMG_SDCARD = 3;
     private String mCurrentPhotoPath;
 
@@ -91,10 +89,10 @@ public class MainActivity extends AppCompatActivity {
     public void getPermissions(View view) {
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED
          || ActivityCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED
-         || ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA, Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.READ_EXTERNAL_STORAGE}, 1);
+         || ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED
+         || ActivityCompat.checkSelfPermission(this, Manifest.permission.INTERNET) != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA, Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.INTERNET}, 1);
         } else {
-            Log.d("TAG", "Ja tem permissoes.");
             openCameraIntent();
         }
     }
@@ -108,7 +106,6 @@ public class MainActivity extends AppCompatActivity {
                 } else {
                     Toast.makeText(this, "Não vai funcionar!!!", Toast.LENGTH_LONG).show();
                 }
-                return;
             }
         }
     }
@@ -186,7 +183,6 @@ public class MainActivity extends AppCompatActivity {
         File file = null;
         if (requestCode == REQUEST_CAPTURE_IMAGE && resultCode == RESULT_OK){
             file = new File(imageFilePath);
-            Log.d("TAG", "Uri: " + file.getName());
 
         }
         if (resultCode == RESULT_OK && resultData != null) {
@@ -205,15 +201,6 @@ public class MainActivity extends AppCompatActivity {
                     Log.d("TAG", e.getMessage());
 
                 }
-            } else if (requestCode == IMG_CAM) {
-                file = new File(android.os.Environment.getExternalStorageDirectory(), "img.png");
-            } else if (requestCode == IMG_CAM2) {
-                try {
-                    file = new File(mCurrentPhotoPath);
-                    //imagem.setImageBitmap(bm1);
-                } catch (Exception fnex) {
-                    Toast.makeText(getApplicationContext(), "Foto não encontrada!", Toast.LENGTH_LONG).show();
-                }
             }
         }
 
@@ -229,28 +216,6 @@ public class MainActivity extends AppCompatActivity {
 
     private static final int EOF = -1;
     private static final int DEFAULT_BUFFER_SIZE = 1024 * 4;
-
-    private void dispatchTakePictureIntent() {
-        Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-        if (takePictureIntent.resolveActivity(getPackageManager()) != null) {
-            File photoFile = null;
-            try {
-                File storageDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES);
-                photoFile = File.createTempFile("PHOTOAPP", ".jpg", storageDir);
-                mCurrentPhotoPath = "file:" + photoFile.getAbsolutePath();
-               // mCurrentPhotoPath = photoFile.getAbsolutePath();
-            }
-            catch(IOException ex){
-                Toast.makeText(getApplicationContext(), "Erro ao tirar a foto", Toast.LENGTH_SHORT).show();
-            }
-
-            if (photoFile != null) {
-                takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT, Uri.fromFile(photoFile));
-                startActivityForResult(takePictureIntent, IMG_CAM2);
-            }
-        }
-    }
-
 
     public static File from(Context context, Uri uri) throws IOException {
         InputStream inputStream = context.getContentResolver().openInputStream(uri);
@@ -318,7 +283,6 @@ public class MainActivity extends AppCompatActivity {
         File newFile = new File(file.getParent(), newName);
         if (!newFile.equals(file)) {
             if (newFile.exists() && newFile.delete()) {
-                Log.d("FileUtil", "Delete old " + newName + " file");
             }
             if (file.renameTo(newFile)) {
                 Log.d("FileUtil", "Rename file to " + newName);
@@ -340,7 +304,6 @@ public class MainActivity extends AppCompatActivity {
 
     public void upload(String url, File file) throws IOException {
         OkHttpClient client = new OkHttpClient();
-        Log.d("TAG", "Vai mandar: " + file.getName());
         RequestBody formBody = new MultipartBody.Builder()
                 .setType(MultipartBody.FORM)
                 .addFormDataPart("fileToUpload", file.getName(),
